@@ -91,7 +91,7 @@ def test_cli_scan_default_shows_full_report(tmp_path: pathlib.Path) -> None:
 
 
 def test_cli_apply_quiet_shows_count_only(tmp_path: pathlib.Path) -> None:
-    """Apply with -q shows only removal count."""
+    """Apply with -q shows removal count and bytes saved."""
     psx = tmp_path / "psx"
     psx.mkdir()
     (psx / "Game (USA).chd").write_bytes(b"x")
@@ -99,6 +99,7 @@ def test_cli_apply_quiet_shows_count_only(tmp_path: pathlib.Path) -> None:
     out = _capture_main(["apply", str(tmp_path), "-q"])
     assert "Removed" in out
     assert "1" in out or "duplicate" in out
+    assert "saved" in out
 
 
 def test_cli_apply_verbose_lists_removed_files(tmp_path: pathlib.Path) -> None:

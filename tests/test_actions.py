@@ -242,6 +242,6 @@ def test_apply_removal_skips_uncertain_when_requested(tmp_roms_dir: Path) -> Non
     (psx / "Game (Japan).chd").write_bytes(b"x")
     report = dry_run(tmp_roms_dir)
     report.groups[0].uncertain = True
-    count = apply_removal(tmp_roms_dir, report, hard=False, skip_uncertain=True)
+    count, _ = apply_removal(tmp_roms_dir, report, hard=False, skip_uncertain=True)
     assert count == 0
     assert (psx / "Game (Japan).chd").exists()

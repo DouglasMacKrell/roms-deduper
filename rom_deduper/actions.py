@@ -94,6 +94,36 @@ def _save_manifest(roms_root: Path, manifest: dict[str, str]) -> None:
     (staging / MANIFEST_FILENAME).write_text(json.dumps(manifest, indent=2))
 
 
+def _size_of_path(p: Path) -> int:
+    """Return size in bytes of file or directory (recursive)."""
+    if p.is_file():
+        try:
+            return p.stat().st_size
+        except OSError:
+            return 0
+    total = 0
+    try:
+        for child in p.rglob("*"):
+            if child.is_file():
+                try:
+                    total += child.stat().st_size
+                except OSError:
+                    pass
+    except OSError:
+        pass
+    return total
+
+
+def _format_bytes(n: int) -> str:
+    """Format bytes as human-readable string (e.g. 1.2 GB)."""
+    val: float = float(n)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if val < 1024:
+            return f"{val:.1f} {unit}" if val != int(val) else f"{int(val)} {unit}"
+        val /= 1024
+    return f"{val:.1f} PB"
+
+
 def _expand_to_remove_orphan_m3u(entries: list[ROMEntry]) -> list[ROMEntry]:
     """Add .m3u files to remove when they exclusively reference entries being removed (orphans)."""
     to_remove_paths = {e.path.resolve() for e in entries}
@@ -126,19 +156,23 @@ def apply_removal(
     *,
     hard: bool = False,
     skip_uncertain: bool = False,
-) -> int:
-    """Apply removal: move to _duplicates_removed (or trash if hard). Returns count removed."""
+) -> tuple[int, int]:
+    """Apply removal: move to _duplicates_removed (or trash if hard).
+    Returns (count removed, bytes freed)."""
     roms_root = Path(roms_root)
     count = 0
+    bytes_freed = 0
     if hard:
         for g in report.groups:
             if skip_uncertain and g.uncertain:
                 continue
             to_remove = g.to_remove  # Already expanded in dry_run report
             for entry in to_remove:
+                if entry.path.exists():
+                    bytes_freed += _size_of_path(entry.path)
                 send2trash.send2trash(str(entry.path))
                 count += 1
-        return count
+        return (count, bytes_freed)
 
     manifest = _load_manifest(roms_root)
     for g in report.groups:
@@ -149,6 +183,7 @@ def apply_removal(
             src = entry.path
             if not src.exists():
                 continue
+            bytes_freed += _size_of_path(src)
             dest = _staging_path(roms_root, entry)
             dest.parent.mkdir(parents=True, exist_ok=True)
             src.rename(dest)
@@ -158,7 +193,7 @@ def apply_removal(
             count += 1
     if manifest:
         _save_manifest(roms_root, manifest)
-    return count
+    return (count, bytes_freed)
 
 
 def restore(

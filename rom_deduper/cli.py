@@ -6,6 +6,7 @@ from pathlib import Path
 from rich.console import Console
 
 from rom_deduper.actions import (
+    _format_bytes,
     apply_removal,
     dry_run,
     format_dry_run_report,
@@ -111,7 +112,7 @@ def main(args: list[str] | None = None) -> None:
     elif parsed.command == "apply":
         with console.status("[bold blue]Scanning ROMs...[/]"):
             report = dry_run(roms_path, config=config)
-        count = apply_removal(
+        count, bytes_freed = apply_removal(
             roms_path,
             report,
             hard=parsed.hard,
@@ -121,7 +122,10 @@ def main(args: list[str] | None = None) -> None:
             for g in report.groups:
                 for r in g.to_remove:
                     console.print(f"[dim]Removed:[/dim] {r.path.relative_to(roms_path)}")
-        console.print(f"[green]Removed {count} duplicate(s)[/green]")
+        msg = f"[green]Removed {count} duplicate(s)[/green]"
+        if bytes_freed > 0:
+            msg += f" — [green]{_format_bytes(bytes_freed)} saved[/green]"
+        console.print(msg)
     elif parsed.command == "restore":
         count = restore(roms_path, on_conflict=parsed.on_conflict)
         console.print(f"[green]Restored {count} file(s)[/green]")
