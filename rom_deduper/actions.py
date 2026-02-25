@@ -49,16 +49,17 @@ def dry_run(roms_root: Path, config: Config | None = None) -> DryRunReport:
     for group in groups:
         result = rank_group(group, config=config)
         if result.to_remove:
+            to_remove_expanded = _expand_to_remove_orphan_m3u(result.to_remove)
             report_groups.append(
                 DryRunGroup(
                     console=group.console,
                     base_title=group.base_title,
                     keeper=result.keeper,
-                    to_remove=result.to_remove,
+                    to_remove=to_remove_expanded,
                     uncertain=result.uncertain,
                 )
             )
-            total_to_remove += len(result.to_remove)
+            total_to_remove += len(to_remove_expanded)
 
     return DryRunReport(
         groups=report_groups,
@@ -133,7 +134,7 @@ def apply_removal(
         for g in report.groups:
             if skip_uncertain and g.uncertain:
                 continue
-            to_remove = _expand_to_remove_orphan_m3u(g.to_remove)
+            to_remove = g.to_remove  # Already expanded in dry_run report
             for entry in to_remove:
                 send2trash.send2trash(str(entry.path))
                 count += 1
@@ -143,7 +144,7 @@ def apply_removal(
     for g in report.groups:
         if skip_uncertain and g.uncertain:
             continue
-        to_remove = _expand_to_remove_orphan_m3u(g.to_remove)
+        to_remove = g.to_remove  # Already expanded in dry_run report
         for entry in to_remove:
             src = entry.path
             if not src.exists():

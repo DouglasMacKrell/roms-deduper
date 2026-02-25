@@ -44,10 +44,20 @@ VERSION_PATTERN = re.compile(r"\((?:Rev\s+(\d+)|v?(\d+(?:\.\d+)?))\)", re.I)
 LANGUAGE_PATTERN = re.compile(r"\(([A-Za-z]{2}(?:,[A-Za-z]{2})*)\)")
 
 
+# Leading articles to move to end for consistent grouping (The X <-> X, The)
+_LEADING_ARTICLES = ("the ", "a ", "an ")
+
+
 def _normalize_title(title: str) -> str:
-    """Normalize title for comparison: lowercase, strip extra spaces."""
+    """Normalize title: lowercase, strip spaces, canonicalize article (The X -> X, the)."""
     t = title.strip().lower()
-    return " ".join(t.split())
+    t = " ".join(t.split())
+    # Move leading article to end: "The Legend of Zelda" -> "legend of zelda, the"
+    for article in _LEADING_ARTICLES:
+        if t.startswith(article) and len(t) > len(article):
+            t = t[len(article) :].strip() + ", " + article.strip()
+            break
+    return t
 
 
 def parse_filename(

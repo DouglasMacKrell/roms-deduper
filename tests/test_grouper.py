@@ -34,6 +34,18 @@ def test_group_same_game_different_regions(tmp_roms_dir: Path) -> None:
     assert len(groups[0].entries) == 2
 
 
+def test_group_article_variants_same_group(tmp_roms_dir: Path) -> None:
+    """'The Legend Of Zelda' and 'Legend Of Zelda, The' group together."""
+    nes = tmp_roms_dir / "nes"
+    nes.mkdir()
+    (nes / "The Legend Of Zelda (USA).nes").write_bytes(b"x")
+    (nes / "Legend Of Zelda, The (Japan).nes").write_bytes(b"x")
+    entries = scan(tmp_roms_dir)
+    groups = group_entries(entries)
+    assert len(groups) == 1
+    assert len(groups[0].entries) == 2
+
+
 def test_group_different_consoles_separate(tmp_roms_dir: Path) -> None:
     """Same game name in different consoles are separate groups."""
     psx = tmp_roms_dir / "psx"

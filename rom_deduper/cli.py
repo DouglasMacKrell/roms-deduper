@@ -105,10 +105,12 @@ def main(args: list[str] | None = None) -> None:
         raise SystemExit(1)
 
     if parsed.command == "scan":
-        report = dry_run(roms_path, config=config)
+        with console.status("[bold blue]Scanning ROMs...[/]"):
+            report = dry_run(roms_path, config=config)
         format_dry_run_report(report, quiet=quiet, debug=debug)
     elif parsed.command == "apply":
-        report = dry_run(roms_path, config=config)
+        with console.status("[bold blue]Scanning ROMs...[/]"):
+            report = dry_run(roms_path, config=config)
         count = apply_removal(
             roms_path,
             report,

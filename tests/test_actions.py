@@ -200,6 +200,21 @@ def test_apply_removal_keeps_m3u_that_references_keeper(tmp_roms_dir: Path) -> N
     assert (psx / "Game (USA).m3u").exists()  # m3u kept, points to keeper
 
 
+def test_dry_run_report_includes_orphan_m3u_in_to_remove(tmp_roms_dir: Path) -> None:
+    """Dry-run report includes orphan .m3u in To Remove when they only reference removed ROMs."""
+    psx = tmp_roms_dir / "psx"
+    psx.mkdir()
+    (psx / "Game (USA).chd").write_bytes(b"x")
+    (psx / "Game (Japan).chd").write_bytes(b"x")
+    (psx / "Game (Japan).m3u").write_text("Game (Japan).chd\n")
+    report = dry_run(tmp_roms_dir)
+    assert len(report.groups) == 1
+    to_remove_names = [r.path.name for r in report.groups[0].to_remove]
+    assert "Game (Japan).chd" in to_remove_names
+    assert "Game (Japan).m3u" in to_remove_names
+    assert report.total_to_remove == 2
+
+
 def test_apply_removal_removes_orphan_m3u_when_exclusively_references_removed(
     tmp_roms_dir: Path,
 ) -> None:

@@ -5,7 +5,7 @@ Find and remove duplicate ROM files across console subdirectories, with preferen
 ## Features
 
 - **Scan** console subdirectories (psx, genesis, snes, etc.) for ROM files
-- **Group** duplicates by normalized game title within each console
+- **Group** duplicates by normalized game title (handles "The X" ↔ "X, The" article variants) within each console
 - **Rank** by region (USA > Europe > Japan), format (.chd > .bin), quality [!], and language
 - **Soft delete** to `_duplicates_removed/` by default; `--hard` sends to OS trash
 - **Restore** from `_duplicates_removed/` back to originals

@@ -28,9 +28,17 @@ def test_parse_extracts_base_title() -> None:
 
 
 def test_parse_normalizes_article_reordering() -> None:
-    """Parser handles 'The X' -> 'X, The' style."""
-    result = parse_filename("Legend of Zelda, The (USA).nes")
-    assert "Legend" in result.base_title and "Zelda" in result.base_title
+    """Parser handles 'The X' and 'X, The' — both normalize to same key for grouping."""
+    r1 = parse_filename("The Legend Of Zelda (USA).fc")
+    r2 = parse_filename("Legend Of Zelda, The (Japan).fc")
+    assert r1.base_title_normalized == r2.base_title_normalized == "legend of zelda, the"
+
+
+def test_parse_normalizes_leading_a_and_an() -> None:
+    """Parser normalizes 'A X' and 'An X' to 'x, a' / 'x, an' for grouping."""
+    r1 = parse_filename("A Bug's Life (USA).nes")
+    r2 = parse_filename("Bug's Life, A (Europe).nes")
+    assert r1.base_title_normalized == r2.base_title_normalized
 
 
 def test_parse_extracts_disc_number() -> None:
