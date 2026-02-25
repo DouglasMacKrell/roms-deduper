@@ -165,6 +165,29 @@ def test_e2e_apply_skip_uncertain_preserves_files(tmp_path: pathlib.Path) -> Non
     assert (psx / "Game (Japan).chd").exists()
 
 
+def test_e2e_config_region_priority_affects_ranking(tmp_path: pathlib.Path) -> None:
+    """Config region_priority overrides default (Japan > USA when configured)."""
+    import json
+
+    psx = tmp_path / "psx"
+    psx.mkdir()
+    (psx / "Game (USA).chd").write_bytes(b"x")
+    (psx / "Game (Japan).chd").write_bytes(b"x")
+    cfg = tmp_path / "cfg.json"
+    cfg.write_text(
+        json.dumps(
+            {
+                "exclude_consoles": [],
+                "region_priority": ["Japan", "USA"],
+            }
+        )
+    )
+    main(["apply", str(tmp_path), "--config", str(cfg)])
+    staging = tmp_path / "_duplicates_removed" / "psx"
+    assert (staging / "Game (USA).chd").exists()
+    assert (psx / "Game (Japan).chd").exists()
+
+
 def test_cli_scan_debug_shows_extra_info(tmp_path: pathlib.Path) -> None:
     """Scan with --debug shows grouping/parser details."""
     psx = tmp_path / "psx"

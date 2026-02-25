@@ -93,6 +93,18 @@ def test_scan_finds_md_and_bin_files(tmp_roms_dir: Path) -> None:
     assert any(".bin" in p for p in paths)
 
 
+def test_scan_includes_game_folders_as_units(tmp_roms_dir: Path) -> None:
+    """Scanner includes folders containing .bin/.cue as ROM entries (one unit)."""
+    game_dir = tmp_roms_dir / "psx" / "Thrill Kill (USA)"
+    game_dir.mkdir(parents=True)
+    (game_dir / "game.bin").write_bytes(b"x")
+    (game_dir / "game.cue").write_bytes(b"x")
+    entries = scan(tmp_roms_dir)
+    folder_entries = [e for e in entries if e.path.is_dir()]
+    assert len(folder_entries) >= 1
+    assert any("Thrill Kill" in str(e.path) for e in entries)
+
+
 def test_scan_uses_config_exclude_consoles(tmp_roms_dir: Path) -> None:
     """Scanner uses config exclude_consoles when provided."""
     psx = tmp_roms_dir / "psx"

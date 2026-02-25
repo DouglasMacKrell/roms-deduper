@@ -50,7 +50,9 @@ def _normalize_title(title: str) -> str:
     return " ".join(t.split())
 
 
-def parse_filename(filename: str) -> ParseResult:
+def parse_filename(
+    filename: str, *, extra_translation_patterns: list[str] | None = None
+) -> ParseResult:
     """Parse a ROM filename and extract metadata."""
     # Remove extension
     stem = filename
@@ -101,8 +103,11 @@ def parse_filename(filename: str) -> ParseResult:
             stem = stem.strip(" -")
 
     # Check for translation: (En) with Japan, or explicit (Translation)/(T-*)
+    translation_patterns = list(TRANSLATION_PATTERNS)
+    if extra_translation_patterns:
+        translation_patterns = translation_patterns + extra_translation_patterns
     has_translation = False
-    for pattern in TRANSLATION_PATTERNS:
+    for pattern in translation_patterns:
         if re.search(pattern, stem):
             has_translation = True
             break

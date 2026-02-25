@@ -26,14 +26,13 @@ class Config:
         )
 
 
-def load_config(roms_root: Path, config_path: Path | None = None) -> Config:
+def load_config(roms_root: Path | None = None, config_path: Path | None = None) -> Config:
     """Load config from config.json or explicit path. Returns defaults if not found."""
-    roms_root = Path(roms_root)
     to_load: Path | None = None
-    if config_path is not None:
-        to_load = Path(config_path) if config_path.exists() else None
-    elif (roms_root / "config.json").exists():
-        to_load = roms_root / "config.json"
+    if config_path is not None and Path(config_path).exists():
+        to_load = Path(config_path)
+    elif roms_root is not None and (Path(roms_root) / "config.json").exists():
+        to_load = Path(roms_root) / "config.json"
     if to_load is None:
         return Config.default()
     data = json.loads(to_load.read_text())
@@ -48,3 +47,8 @@ def load_config(roms_root: Path, config_path: Path | None = None) -> Config:
         region_priority=data.get("region_priority"),
         roms_path=Path(data["roms_path"]) if data.get("roms_path") else None,
     )
+
+
+def load_config_from_file(config_path: Path) -> Config:
+    """Load config from explicit file path (for when roms_root unknown)."""
+    return load_config(roms_root=None, config_path=config_path)

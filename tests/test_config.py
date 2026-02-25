@@ -55,6 +55,17 @@ def _capture_main(args: list[str]) -> str:
     return buf.getvalue()
 
 
+def test_cli_uses_roms_path_when_no_path_given(tmp_path: pathlib.Path) -> None:
+    """CLI uses config roms_path when path not provided and config has it."""
+    psx = tmp_path / "psx"
+    psx.mkdir()
+    (psx / "Game (USA).chd").write_bytes(b"x")
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({"roms_path": str(tmp_path), "exclude_consoles": []}))
+    out = _capture_main(["scan", "--config", str(config_file)])
+    assert "Game (USA)" in out or "1" in out
+
+
 def test_cli_scan_uses_config(tmp_path: pathlib.Path) -> None:
     """CLI scan respects --config exclude_consoles."""
     psx = tmp_path / "psx"

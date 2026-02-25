@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from rom_deduper.config import Config
 from rom_deduper.grouper import group_entries
 from rom_deduper.ranker import rank_group
 from rom_deduper.scanner import scan
@@ -115,3 +116,21 @@ def test_rank_japan_with_translation_over_japan_only(tmp_roms_dir: Path) -> None
     result = rank_group(groups[0])
     assert result.keeper is not None
     assert "En" in str(result.keeper.path) or "(En)" in str(result.keeper.path)
+
+
+def test_rank_region_priority_override(tmp_roms_dir: Path) -> None:
+    """Config region_priority overrides default (Japan > USA when configured)."""
+    psx = tmp_roms_dir / "psx"
+    psx.mkdir()
+    (psx / "Game (USA).chd").write_bytes(b"x")
+    (psx / "Game (Japan).chd").write_bytes(b"x")
+    entries = scan(tmp_roms_dir)
+    groups = group_entries(entries)
+    config = Config(
+        exclude_consoles=set(),
+        translation_patterns=[],
+        region_priority=["Japan", "USA"],
+    )
+    result = rank_group(groups[0], config=config)
+    assert result.keeper is not None
+    assert "Japan" in str(result.keeper.path)

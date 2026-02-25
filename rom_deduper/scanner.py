@@ -51,8 +51,28 @@ def scan(roms_root: Path, config: "Config | None" = None) -> list[ROMEntry]:
             continue
 
         console = console_dir.name
+        game_folders: set[Path] = set()
         for path in console_dir.rglob("*"):
             if path.is_dir():
+                continue
+            suffix = path.suffix.lower()
+            if suffix not in ROM_EXTENSIONS:
+                continue
+            parent = path.parent
+            if parent != console_dir and parent.name not in (".", ".."):
+                has_roms = any(
+                    p.suffix.lower() in ROM_EXTENSIONS for p in parent.iterdir() if p.is_file()
+                )
+                if has_roms:
+                    game_folders.add(parent)
+        added_from_folders: set[Path] = set()
+        for path in console_dir.rglob("*"):
+            if path.is_dir():
+                continue
+            if path.parent in game_folders:
+                if path.parent not in added_from_folders:
+                    entries.append(ROMEntry(path=path.parent, console=console, extension=None))
+                    added_from_folders.add(path.parent)
                 continue
             suffix = path.suffix.lower()
             if suffix in ROM_EXTENSIONS:

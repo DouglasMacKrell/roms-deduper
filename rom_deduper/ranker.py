@@ -1,10 +1,14 @@
 """Apply region/language priority rules to select keepers."""
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from rom_deduper.grouper import GameGroup
 from rom_deduper.parser import parse_filename
 from rom_deduper.scanner import ROMEntry
+
+if TYPE_CHECKING:
+    from rom_deduper.config import Config
 
 # Region priority: higher = better. USA/U highest.
 REGION_SCORE = {
@@ -39,11 +43,17 @@ class RankResult:
     uncertain: bool = False
 
 
-def _score_entry(entry: ROMEntry) -> tuple[int, int, int, int, int]:
+def _score_entry(
+    entry: ROMEntry,
+    *,
+    region_score_map: dict[str, int] | None = None,
+    translation_patterns: list[str] | None = None,
+) -> tuple[int, int, int, int, int]:
     """Score entry for ranking. Higher is better.
     Returns (region, format, quality, version, size)."""
-    parsed = parse_filename(entry.path.name)
-    region_score = REGION_SCORE.get(parsed.region or "", 0)
+    parsed = parse_filename(entry.path.name, extra_translation_patterns=translation_patterns)
+    score_map = region_score_map or REGION_SCORE
+    region_score = score_map.get(parsed.region or "", 0)
 
     # Translation bonus for Japan
     if parsed.region in ("J", "Japan") and parsed.has_translation:
@@ -88,12 +98,35 @@ def _score_entry(entry: ROMEntry) -> tuple[int, int, int, int, int]:
     return (region_score, format_score, quality_score, version_score, size)
 
 
-def rank_group(group: GameGroup) -> RankResult:
+def _region_score_from_priority(priority: list[str]) -> dict[str, int]:
+    """Build region score map from ordered list. First=highest."""
+    if not priority:
+        return {}
+    return {r: 100 - i * 10 for i, r in enumerate(priority)}
+
+
+def rank_group(group: GameGroup, config: "Config | None" = None) -> RankResult:
     """Rank entries in a group and select keeper. Returns keeper and to_remove list."""
     if len(group.entries) == 1:
         return RankResult(keeper=group.entries[0], to_remove=[])
 
-    scored = [(entry, _score_entry(entry)) for entry in group.entries]
+    region_map = dict(REGION_SCORE)
+    if config and config.region_priority:
+        region_map.update(_region_score_from_priority(config.region_priority))
+
+    translation_patterns = config.translation_patterns if config else None
+
+    scored = [
+        (
+            entry,
+            _score_entry(
+                entry,
+                region_score_map=region_map,
+                translation_patterns=translation_patterns,
+            ),
+        )
+        for entry in group.entries
+    ]
     scored.sort(key=lambda x: x[1], reverse=True)
 
     keeper = scored[0][0]

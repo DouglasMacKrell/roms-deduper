@@ -77,3 +77,16 @@ def test_parse_base_title_normalization_matches_same_game() -> None:
     r1 = parse_filename("Game (USA).chd")
     r2 = parse_filename("Game (Japan).chd")
     assert r1.base_title_normalized == r2.base_title_normalized
+
+
+def test_parse_extra_translation_patterns_from_config() -> None:
+    """Parser uses config translation_patterns for has_translation."""
+    r = parse_filename("Game (Japan) (T-TeamXYZ).chd")
+    assert r.has_translation is True
+    r2 = parse_filename("Game (Japan) (CustomPatch).chd")
+    assert r2.has_translation is False
+    r3 = parse_filename(
+        "Game (Japan) (CustomPatch).chd",
+        extra_translation_patterns=[r"\(CustomPatch\)"],
+    )
+    assert r3.has_translation is True

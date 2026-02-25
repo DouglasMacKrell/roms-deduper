@@ -186,6 +186,23 @@ def test_restore_overwrite_when_policy_overwrite(tmp_roms_dir: Path) -> None:
     assert not (staging / "Game (Japan).chd").exists()
 
 
+def test_apply_removal_includes_m3u_when_exclusively_references_removed(
+    tmp_roms_dir: Path,
+) -> None:
+    """When removing a .chd, also remove .m3u if it only references that .chd."""
+    psx = tmp_roms_dir / "psx"
+    psx.mkdir()
+    (psx / "Game (USA).chd").write_bytes(b"x")
+    (psx / "Game (Japan).chd").write_bytes(b"x")
+    (psx / "Game (Japan).m3u").write_text("Game (Japan).chd\n")
+    report = dry_run(tmp_roms_dir)
+    apply_removal(tmp_roms_dir, report, hard=False)
+    staging = tmp_roms_dir / "_duplicates_removed" / "psx"
+    assert (staging / "Game (Japan).chd").exists()
+    assert (staging / "Game (Japan).m3u").exists()
+    assert not (psx / "Game (Japan).m3u").exists()
+
+
 def test_apply_removal_skips_uncertain_when_requested(tmp_roms_dir: Path) -> None:
     """Apply with skip_uncertain=True does not remove from uncertain groups."""
     from rom_deduper.actions import dry_run

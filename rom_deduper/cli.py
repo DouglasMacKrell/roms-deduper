@@ -11,7 +11,7 @@ from rom_deduper.actions import (
     format_dry_run_report,
     restore,
 )
-from rom_deduper.config import load_config
+from rom_deduper.config import load_config, load_config_from_file
 
 
 def _add_verbosity(parser: argparse.ArgumentParser) -> None:
@@ -36,7 +36,13 @@ def main(args: list[str] | None = None) -> None:
         )
 
     scan_parser = subparsers.add_parser("scan", help="Scan ROMs directory")
-    scan_parser.add_argument("path", type=Path, help="Path to ROMs directory")
+    scan_parser.add_argument(
+        "path",
+        type=Path,
+        nargs="?",
+        default=None,
+        help="Path to ROMs directory (default: from config roms_path)",
+    )
     add_config_arg(scan_parser)
     scan_parser.add_argument(
         "--dry-run",
@@ -47,7 +53,13 @@ def main(args: list[str] | None = None) -> None:
     _add_verbosity(scan_parser)
 
     apply_parser = subparsers.add_parser("apply", help="Remove duplicates")
-    apply_parser.add_argument("path", type=Path, help="Path to ROMs directory")
+    apply_parser.add_argument(
+        "path",
+        type=Path,
+        nargs="?",
+        default=None,
+        help="Path to ROMs directory (default: from config roms_path)",
+    )
     add_config_arg(apply_parser)
     apply_parser.add_argument(
         "--hard",
@@ -62,7 +74,13 @@ def main(args: list[str] | None = None) -> None:
     _add_verbosity(apply_parser)
 
     restore_parser = subparsers.add_parser("restore", help="Restore from _duplicates_removed")
-    restore_parser.add_argument("path", type=Path, help="Path to ROMs directory")
+    restore_parser.add_argument(
+        "path",
+        type=Path,
+        nargs="?",
+        default=None,
+        help="Path to ROMs directory (default: from config roms_path)",
+    )
     restore_parser.add_argument(
         "--on-conflict",
         choices=["skip", "overwrite", "remove"],
@@ -78,15 +96,27 @@ def main(args: list[str] | None = None) -> None:
     verbose = getattr(parsed, "verbose", False)
     debug = getattr(parsed, "debug", False)
     console = Console()
-    config = load_config(parsed.path, config_path=getattr(parsed, "config", None))
+    config_path = getattr(parsed, "config", None)
+    if parsed.path is not None:
+        config = load_config(parsed.path, config_path=config_path)
+        roms_path = parsed.path
+    elif config_path and Path(config_path).exists():
+        config = load_config_from_file(Path(config_path))
+        roms_path = config.roms_path
+        if roms_path is None:
+            console.print("[red]Error: path required when config has no roms_path[/red]")
+            raise SystemExit(1)
+    else:
+        console.print("[red]Error: path required (or use --config with roms_path)[/red]")
+        raise SystemExit(1)
 
     if parsed.command == "scan":
-        report = dry_run(parsed.path, config=config)
+        report = dry_run(roms_path, config=config)
         format_dry_run_report(report, quiet=quiet, debug=debug)
     elif parsed.command == "apply":
-        report = dry_run(parsed.path, config=config)
+        report = dry_run(roms_path, config=config)
         count = apply_removal(
-            parsed.path,
+            roms_path,
             report,
             hard=parsed.hard,
             skip_uncertain=getattr(parsed, "skip_uncertain", False),
@@ -94,8 +124,8 @@ def main(args: list[str] | None = None) -> None:
         if verbose:
             for g in report.groups:
                 for r in g.to_remove:
-                    console.print(f"[dim]Removed:[/dim] {r.path.relative_to(parsed.path)}")
+                    console.print(f"[dim]Removed:[/dim] {r.path.relative_to(roms_path)}")
         console.print(f"[green]Removed {count} duplicate(s)[/green]")
     elif parsed.command == "restore":
-        count = restore(parsed.path, on_conflict=parsed.on_conflict)
+        count = restore(roms_path, on_conflict=parsed.on_conflict)
         console.print(f"[green]Restored {count} file(s)[/green]")

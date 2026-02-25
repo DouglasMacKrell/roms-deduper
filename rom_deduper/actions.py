@@ -47,7 +47,7 @@ def dry_run(roms_root: Path, config: Config | None = None) -> DryRunReport:
     total_to_remove = 0
 
     for group in groups:
-        result = rank_group(group)
+        result = rank_group(group, config=config)
         if result.to_remove:
             report_groups.append(
                 DryRunGroup(
@@ -93,6 +93,32 @@ def _save_manifest(roms_root: Path, manifest: dict[str, str]) -> None:
     (staging / MANIFEST_FILENAME).write_text(json.dumps(manifest, indent=2))
 
 
+def _expand_to_remove_with_m3u(entries: list[ROMEntry]) -> list[ROMEntry]:
+    """Add .m3u files to remove when they exclusively reference entries being removed."""
+    to_remove_paths = {e.path.resolve() for e in entries}
+    expanded = list(entries)
+    for entry in entries:
+        if entry.path.suffix.lower() not in (".chd", ".bin", ".cue"):
+            continue
+        m3u_path = entry.path.with_suffix(".m3u")
+        if not m3u_path.exists():
+            continue
+        if any(e.path == m3u_path for e in expanded):
+            continue
+        try:
+            refs = [
+                (m3u_path.parent / line.strip()).resolve()
+                for line in m3u_path.read_text().splitlines()
+                if line.strip()
+            ]
+        except OSError:
+            continue
+        if refs and all(r in to_remove_paths for r in refs):
+            expanded.append(ROMEntry(path=m3u_path, console=entry.console, extension=".m3u"))
+            to_remove_paths.add(m3u_path.resolve())
+    return expanded
+
+
 def apply_removal(
     roms_root: Path,
     report: DryRunReport,
@@ -107,7 +133,8 @@ def apply_removal(
         for g in report.groups:
             if skip_uncertain and g.uncertain:
                 continue
-            for entry in g.to_remove:
+            to_remove = _expand_to_remove_with_m3u(g.to_remove)
+            for entry in to_remove:
                 send2trash.send2trash(str(entry.path))
                 count += 1
         return count
@@ -116,7 +143,8 @@ def apply_removal(
     for g in report.groups:
         if skip_uncertain and g.uncertain:
             continue
-        for entry in g.to_remove:
+        to_remove = _expand_to_remove_with_m3u(g.to_remove)
+        for entry in to_remove:
             src = entry.path
             if not src.exists():
                 continue
