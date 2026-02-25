@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import send2trash
+from rich.console import Console
+from rich.table import Table
 
 from rom_deduper.grouper import group_entries
 from rom_deduper.ranker import rank_group
@@ -142,21 +144,28 @@ def restore(roms_root: Path) -> int:
     return count
 
 
-def format_dry_run_report(report: DryRunReport) -> str:
-    """Format dry-run report as human-readable text."""
-    lines = [
-        "=== Dry Run Report ===",
-        f"Total files: {report.total_files}",
-        f"Duplicate groups: {report.duplicate_groups}",
-        f"Files to remove: {report.total_to_remove}",
-        "",
-    ]
+def format_dry_run_report(report: DryRunReport, *, quiet: bool = False) -> None:
+    """Format and print dry-run report. Uses Rich table when not quiet."""
+    console = Console()
+    summary = (
+        f"[bold]Dry Run Report[/bold]\n"
+        f"Total files: {report.total_files} | "
+        f"Duplicate groups: {report.duplicate_groups} | "
+        f"Files to remove: {report.total_to_remove}"
+    )
+    console.print(summary)
+    if quiet:
+        return
+    if not report.groups:
+        return
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Console", style="cyan")
+    table.add_column("Title", style="green")
+    table.add_column("Keeper", style="green")
+    table.add_column("To Remove", style="red")
     for g in report.groups:
-        lines.append(f"[{g.console}] {g.base_title}")
-        lines.append(f"  KEEP: {g.keeper.path.name if g.keeper else '?'}")
-        for r in g.to_remove:
-            lines.append(f"  REMOVE: {r.path.name}")
-        if g.uncertain:
-            lines.append("  (uncertain - manual review recommended)")
-        lines.append("")
-    return "\n".join(lines)
+        keeper_name = g.keeper.path.name if g.keeper else "?"
+        to_remove_names = ", ".join(r.path.name for r in g.to_remove)
+        uncertain = " (uncertain)" if g.uncertain else ""
+        table.add_row(g.console, g.base_title + uncertain, keeper_name, to_remove_names)
+    console.print(table)
