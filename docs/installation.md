@@ -18,7 +18,7 @@ pip install -e ".[dev]"
 This installs:
 
 - **Runtime**: `send2trash`, `rich`
-- **Dev**: `pytest`, `pytest-cov`, `ruff`, `pre-commit`
+- **Dev**: `pytest`, `pytest-cov`, `ruff`, `pre-commit`, `pyright`
 
 The `-e` flag installs in editable mode so code changes take effect immediately.
 
@@ -44,6 +44,7 @@ pre-commit install --install-hooks
 |------|------|------|
 | ruff | On commit | Lint and format |
 | ruff-format | On commit | Format code |
+| pyright | On commit | Static type checking |
 | pytest | On push | Full test suite + coverage (80% min) |
 
 To bypass (not recommended): `git commit --no-verify` or `git push --no-verify`.
@@ -77,6 +78,7 @@ pre-commit install --install-hooks
 GitHub Actions runs on push/PR to `main` and `develop`:
 
 - **lint**: `ruff check` and `ruff format --check`
+- **type check**: `pyright rom_deduper tests`
 - **test**: `pytest --cov --cov-fail-under=80`
 
 See [.github/workflows/ci.yml](../.github/workflows/ci.yml).

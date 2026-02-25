@@ -26,6 +26,9 @@ jobs:
       - name: Ruff format
         run: ruff format --check rom_deduper tests
 
+      - name: Pyright
+        run: pyright rom_deduper tests
+
   test:
     runs-on: ubuntu-latest
     steps:

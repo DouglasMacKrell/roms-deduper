@@ -14,6 +14,7 @@ Documentation for the rom-deduper tool.
 
 | Document | Description |
 |----------|-------------|
+| [Technology Stack](technology.md) | Tools and libraries used, and why each was selected |
 | [Config Reference](config.md) | All config options explained |
 | [config.example.json](../config.example.json) | Example config file |
 | [Main README](../README.md) | Project overview and usage |

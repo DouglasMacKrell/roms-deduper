@@ -3,11 +3,19 @@ repos:
     rev: v0.8.0
     hooks:
       - id: ruff
-        args: [--fix]
+        args: [--fix, rom_deduper, tests]
+        pass_filenames: false
       - id: ruff-format
+        args: [rom_deduper, tests]
+        pass_filenames: false
 
   - repo: local
     hooks:
+      - id: pyright
+        name: pyright
+        entry: pyright
+        language: system
+        pass_filenames: false
       - id: pytest
         name: pytest
         entry: pytest --cov=rom_deduper --cov-fail-under=80 --cov-report=term-missing

@@ -20,6 +20,7 @@ dev = [
     "pytest-cov>=4.0",
     "ruff>=0.1.0",
     "pre-commit>=3.0",
+    "pyright>=1.1.0",
 ]
 
 [project.scripts]
@@ -53,3 +54,12 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
+
+[tool.pyright]
+pythonVersion = "3.10"
+typeCheckingMode = "standard"
+include = ["rom_deduper", "tests"]
+exclude = [".venv", ".git"]
+reportMissingTypeStubs = false
+reportUnusedImport = "warning"
+reportUnusedVariable = "warning"

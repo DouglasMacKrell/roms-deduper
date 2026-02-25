@@ -114,6 +114,7 @@ pytest
 pytest --cov=rom_deduper --cov-fail-under=80
 ruff check rom_deduper tests
 ruff format rom_deduper tests
+pyright rom_deduper tests
 ```
 
 See [docs/testing.md](docs/testing.md) for full test documentation.
