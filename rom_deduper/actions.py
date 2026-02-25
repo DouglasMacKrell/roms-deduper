@@ -176,8 +176,12 @@ def restore(
     return count
 
 
-def format_dry_run_report(report: DryRunReport, *, quiet: bool = False) -> None:
+def format_dry_run_report(
+    report: DryRunReport, *, quiet: bool = False, debug: bool = False
+) -> None:
     """Format and print dry-run report. Uses Rich table when not quiet."""
+    from rom_deduper.parser import parse_filename
+
     console = Console()
     summary = (
         f"[bold]Dry Run Report[/bold]\n"
@@ -186,6 +190,16 @@ def format_dry_run_report(report: DryRunReport, *, quiet: bool = False) -> None:
         f"Files to remove: {report.total_to_remove}"
     )
     console.print(summary)
+    if debug and report.groups:
+        console.print("\n[bold]Debug — grouping details:[/bold]")
+        for g in report.groups:
+            console.print(f"  [cyan]{g.console}[/cyan] [green]{g.base_title}[/green]")
+            if g.keeper:
+                p = parse_filename(g.keeper.path.name)
+                console.print(f"    keeper: {g.keeper.path.name} (region={p.region})")
+            for r in g.to_remove:
+                p = parse_filename(r.path.name)
+                console.print(f"    remove: {r.path.name} (region={p.region})")
     if quiet:
         return
     if not report.groups:

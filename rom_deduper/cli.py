@@ -15,10 +15,11 @@ from rom_deduper.config import load_config
 
 
 def _add_verbosity(parser: argparse.ArgumentParser) -> None:
-    """Add -q and -v to a subparser."""
+    """Add -q, -v, and --debug to a subparser."""
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-q", "--quiet", action="store_true", help="Summary only")
     group.add_argument("-v", "--verbose", action="store_true", help="Per-file details")
+    group.add_argument("--debug", action="store_true", help="Parser and grouping details")
 
 
 def main(args: list[str] | None = None) -> None:
@@ -75,12 +76,13 @@ def main(args: list[str] | None = None) -> None:
 
     quiet = getattr(parsed, "quiet", False)
     verbose = getattr(parsed, "verbose", False)
+    debug = getattr(parsed, "debug", False)
     console = Console()
     config = load_config(parsed.path, config_path=getattr(parsed, "config", None))
 
     if parsed.command == "scan":
         report = dry_run(parsed.path, config=config)
-        format_dry_run_report(report, quiet=quiet)
+        format_dry_run_report(report, quiet=quiet, debug=debug)
     elif parsed.command == "apply":
         report = dry_run(parsed.path, config=config)
         count = apply_removal(
