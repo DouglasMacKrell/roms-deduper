@@ -4,32 +4,90 @@ Find and remove duplicate ROM files across console subdirectories, with preferen
 
 ## Features
 
-- Scans console subdirectories (psx, genesis, snes, etc.)
-- Groups duplicates by normalized game title
-- Ranks by region (USA > Europe > Japan) and language (English preferred)
-- Soft delete to `_duplicates_removed/` by default; `--hard` sends to trash
-- `--restore` to move files back from `_duplicates_removed/`
-- Excludes Daphne (LaserDisc) and related folders
-- Handles multi-disk games, .m3u playlists, .bin/.cue pairs
+- **Scan** console subdirectories (psx, genesis, snes, etc.) for ROM files
+- **Group** duplicates by normalized game title within each console
+- **Rank** by region (USA > Europe > Japan), format (.chd > .bin), quality [!], and language
+- **Soft delete** to `_duplicates_removed/` by default; `--hard` sends to OS trash
+- **Restore** from `_duplicates_removed/` back to originals
+- **Config** via `config.json` or `--config` for exclude_consoles, region_priority, translation_patterns
+- **Excludes** Daphne (LaserDisc), singe, hypseus, and dirs starting with `.` or `_`
+- **Handles** multi-disk games, .m3u playlists, .bin/.cue pairs, game folders as units
+- **Removes** .m3u when it exclusively references a removed ROM
 
-## Setup
+## Quick Start
+
+```bash
+# Install
+pip install -e ".[dev]"
+
+# Scan (dry run, report only)
+rom-deduper scan /path/to/ROMs
+
+# Apply removal
+rom-deduper apply /path/to/ROMs
+
+# Restore if needed
+rom-deduper restore /path/to/ROMs
+```
+
+See [docs/quick-start.md](docs/quick-start.md) for a guided walkthrough.
+
+## Installation
 
 ```bash
 pip install -e ".[dev]"
 pre-commit install --install-hooks
 ```
 
+Requires Python 3.10+. See [docs/installation.md](docs/installation.md) for full details.
+
 ## Usage
 
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `scan [path]` | Report duplicates (dry run). Path optional if `roms_path` in config |
+| `apply [path]` | Remove duplicates to `_duplicates_removed/` or trash |
+| `restore [path]` | Restore files from `_duplicates_removed/` |
+
+### Options
+
+**Common**
+
+- `--config PATH` — Path to config.json
+- `-q, --quiet` — Summary only
+- `-v, --verbose` — Per-file details
+- `--debug` — Parser and grouping details (scan only)
+
+**apply**
+
+- `--hard` — Send to OS trash instead of `_duplicates_removed/`
+- `--skip-uncertain` — Skip groups with uncertain ranking
+
+**restore**
+
+- `--on-conflict {skip,overwrite,remove}` — When original exists: skip (default), overwrite, or remove from duplicates
+
+### Examples
+
 ```bash
-rom-deduper scan /path/to/ROMs --dry-run   # Report only (default)
-rom-deduper apply /path/to/ROMs            # Remove duplicates
-rom-deduper restore /path/to/ROMs         # Restore from _duplicates_removed
+# Scan with verbose output
+rom-deduper scan /path/to/ROMs -v
+
+# Apply with config, skip uncertain groups
+rom-deduper apply /path/to/ROMs --config ./myconfig.json --skip-uncertain
+
+# Restore, overwrite when original exists
+rom-deduper restore /path/to/ROMs --on-conflict overwrite
+
+# Use roms_path from config (no path)
+rom-deduper scan --config /path/to/config.json
 ```
 
 ## Config
 
-Optional `config.json` (next to ROMs root or via `--config`):
+Optional `config.json` in ROMs root or via `--config`:
 
 ```json
 {
@@ -40,11 +98,33 @@ Optional `config.json` (next to ROMs root or via `--config`):
 }
 ```
 
+| Key | Description |
+|-----|-------------|
+| `exclude_consoles` | Console dirs to skip (case-insensitive) |
+| `translation_patterns` | Regex list for translation tags beyond built-in `(En)`, `(Translation)`, `(T-*)` |
+| `region_priority` | Override region order, e.g. `["Japan", "USA"]` |
+| `roms_path` | Default ROMs path when none given on CLI |
+
+Copy `config.example.json` as a starting point.
+
 ## Development
 
 ```bash
 pytest
 pytest --cov=rom_deduper --cov-fail-under=80
-ruff check .
-ruff format .
+ruff check rom_deduper tests
+ruff format rom_deduper tests
 ```
+
+See [docs/testing.md](docs/testing.md) for full test documentation.
+
+## Documentation
+
+- [Quick Start](docs/quick-start.md) — Guided walkthrough
+- [Installation](docs/installation.md) — Full install guide
+- [Testing](docs/testing.md) — How to run tests
+- [Config Reference](docs/config.md) — Config options
+
+## License
+
+MIT
