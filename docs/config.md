@@ -13,14 +13,14 @@ When using `--config` without a path argument, `roms_path` from the config is us
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `exclude_consoles` | `string[]` | `["daphne", "singe", "hypseus"]` | Console directories to skip (case-insensitive) |
+| `exclude_consoles` | `string[]` | `["daphne", "singe", "hypseus", "ports"]` | Console directories to skip (case-insensitive) |
 | `translation_patterns` | `string[]` | `[]` | Regex patterns for translation tags beyond built-in |
 | `region_priority` | `string[]` \| `null` | `null` | Override region ranking order |
 | `roms_path` | `string` \| `null` | `null` | Default ROMs path when none given on CLI |
 
 ## exclude_consoles
 
-Consoles listed here are not scanned. Use for LaserDisc (Daphne) and similar.
+Consoles listed here are not scanned. Default includes daphne (LaserDisc), singe, hypseus, and ports (PortMaster-managed).
 
 ```json
 {

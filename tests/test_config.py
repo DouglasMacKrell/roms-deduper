@@ -11,7 +11,7 @@ from rom_deduper.config import load_config
 def test_load_config_returns_defaults_when_no_file(tmp_path: pathlib.Path) -> None:
     """Load config returns defaults when no config.json exists."""
     cfg = load_config(tmp_path)
-    assert cfg.exclude_consoles == {"daphne", "singe", "hypseus"}
+    assert cfg.exclude_consoles == {"daphne", "singe", "hypseus", "ports"}
     assert cfg.translation_patterns == []
     assert cfg.region_priority is None
 

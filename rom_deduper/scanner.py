@@ -20,7 +20,7 @@ ROM_EXTENSIONS = {
     ".gba",
 }
 
-EXCLUDED_CONSOLES = {"daphne", "singe", "hypseus"}
+EXCLUDED_CONSOLES = {"daphne", "singe", "hypseus", "ports"}
 EXCLUDED_PREFIXES = (".", "_")  # Skip .venv, .git, _duplicates_removed, etc.
 
 

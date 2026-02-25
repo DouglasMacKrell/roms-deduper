@@ -10,8 +10,8 @@ Find and remove duplicate ROM files across console subdirectories, with preferen
 - **Soft delete** to `_duplicates_removed/` by default; `--hard` sends to OS trash
 - **Restore** from `_duplicates_removed/` back to originals
 - **Config** via `config.json` or `--config` for exclude_consoles, region_priority, translation_patterns
-- **Excludes** Daphne (LaserDisc), singe, hypseus, and dirs starting with `.` or `_`
-- **Handles** multi-disk games, .m3u playlists, .bin/.cue pairs, game folders as units
+- **Excludes** Daphne (LaserDisc), singe, hypseus, ports (PortMaster-managed), and dirs starting with `.` or `_`
+- **Handles** multi-disk games (keeps all discs of same region; never removes sibling discs), .m3u playlists, .bin/.cue pairs, game folders as units
 - **Keeps** .m3u playlists (never treats them as duplicates); removes orphan .m3u when they exclusively reference removed ROMs
 
 ## Quick Start

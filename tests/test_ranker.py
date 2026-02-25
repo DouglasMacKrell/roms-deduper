@@ -4,6 +4,7 @@ from pathlib import Path
 
 from rom_deduper.config import Config
 from rom_deduper.grouper import group_entries
+from rom_deduper.parser import parse_filename
 from rom_deduper.ranker import rank_group
 from rom_deduper.scanner import scan
 
@@ -116,6 +117,38 @@ def test_rank_japan_with_translation_over_japan_only(tmp_roms_dir: Path) -> None
     result = rank_group(groups[0])
     assert result.keeper is not None
     assert "En" in str(result.keeper.path) or "(En)" in str(result.keeper.path)
+
+
+def test_rank_keeps_all_discs_of_multidisk_game(tmp_roms_dir: Path) -> None:
+    """Multi-disc games: keep all discs of same region, never remove sibling discs."""
+    segacd = tmp_roms_dir / "segacd"
+    segacd.mkdir()
+    (segacd / "Dracula Unleashed (U) (Disc 1).chd").write_bytes(b"disc1")
+    (segacd / "Dracula Unleashed (U) (Disc 2).chd").write_bytes(b"disc2")
+    entries = scan(tmp_roms_dir)
+    groups = group_entries(entries)
+    result = rank_group(groups[0])
+    assert result.keeper is not None
+    assert "Disc" in str(result.keeper.path)
+    assert len(result.to_remove) == 0  # Both discs kept, neither is a duplicate
+
+
+def test_rank_removes_worse_region_discs_keeps_best_set(tmp_roms_dir: Path) -> None:
+    """Multi-disc with USA and Japan: keep USA set (both discs), remove Japan set."""
+    segacd = tmp_roms_dir / "segacd"
+    segacd.mkdir()
+    (segacd / "Prize Fighter (U) (Disc 1).chd").write_bytes(b"u1")
+    (segacd / "Prize Fighter (U) (Disc 2).chd").write_bytes(b"u2")
+    (segacd / "Prize Fighter (J) (Disc 1).chd").write_bytes(b"j1")
+    (segacd / "Prize Fighter (J) (Disc 2).chd").write_bytes(b"j2")
+    entries = scan(tmp_roms_dir)
+    groups = group_entries(entries)
+    result = rank_group(groups[0])
+    assert result.keeper is not None
+    assert "U" in str(result.keeper.path) or "USA" in str(result.keeper.path)
+    to_remove_regions = [parse_filename(e.path.name).region for e in result.to_remove]
+    assert all(r in ("J", "Japan") for r in to_remove_regions)
+    assert len(result.to_remove) == 2  # Japan Disc 1 and Disc 2
 
 
 def test_rank_never_removes_m3u_playlists(tmp_roms_dir: Path) -> None:

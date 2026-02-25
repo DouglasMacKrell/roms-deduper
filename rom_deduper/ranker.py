@@ -105,6 +105,11 @@ def _region_score_from_priority(priority: list[str]) -> dict[str, int]:
     return {r: 100 - i * 10 for i, r in enumerate(priority)}
 
 
+def _set_key(entry: ROMEntry, score: tuple[int, int, int, int, int]) -> tuple:
+    """Key for multi-disc siblings: (region, format, quality, version). Disc number excluded."""
+    return (score[0], score[1], score[2], score[3])
+
+
 def rank_group(group: GameGroup, config: "Config | None" = None) -> RankResult:
     """Rank entries in a group and select keeper. Returns keeper and to_remove list."""
     if len(group.entries) == 1:
@@ -130,8 +135,22 @@ def rank_group(group: GameGroup, config: "Config | None" = None) -> RankResult:
     scored.sort(key=lambda x: x[1], reverse=True)
 
     keeper = scored[0][0]
+    keeper_score = scored[0][1]
+    keeper_key = _set_key(keeper, keeper_score)
+
     # Never treat .m3u as a duplicate — they're playlists that reference ROMs, not ROMs themselves
-    to_remove = [e for e, _ in scored[1:] if (e.extension or "").lower() != ".m3u"]
+    # Never remove sibling discs — Disc 1 and Disc 2 of same game/region are not duplicates
+    keeper_parsed = parse_filename(keeper.path.name)
+    to_remove = []
+    for e, s in scored[1:]:
+        if (e.extension or "").lower() == ".m3u":
+            continue
+        e_parsed = parse_filename(e.path.name)
+        # Same set (region/format/quality) and has disc_number = sibling disc, keep it
+        if keeper_parsed.disc_number is not None or e_parsed.disc_number is not None:
+            if _set_key(e, s) == keeper_key:
+                continue  # Sibling disc of keeper, never remove
+        to_remove.append(e)
 
     # Check for tie (same score)
     uncertain = len(scored) > 1 and scored[0][1] == scored[1][1]

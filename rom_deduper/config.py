@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_EXCLUDED_CONSOLES = {"daphne", "singe", "hypseus"}
+DEFAULT_EXCLUDED_CONSOLES = {"daphne", "singe", "hypseus", "ports"}
 
 
 @dataclass

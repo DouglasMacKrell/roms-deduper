@@ -1,5 +1,5 @@
 {
-  "exclude_consoles": ["daphne", "singe", "hypseus"],
+  "exclude_consoles": ["daphne", "singe", "hypseus","ports"],
   "translation_patterns": [],
   "region_priority": null,
   "roms_path": null
