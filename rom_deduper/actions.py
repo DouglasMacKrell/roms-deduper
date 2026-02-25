@@ -1,7 +1,10 @@
 """Dry-run, move to _duplicates_removed, trash, restore."""
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import send2trash
 
 from rom_deduper.grouper import group_entries
 from rom_deduper.ranker import rank_group
@@ -57,6 +60,86 @@ def dry_run(roms_root: Path) -> DryRunReport:
         duplicate_groups=len(report_groups),
         total_to_remove=total_to_remove,
     )
+
+
+STAGING_DIR = "_duplicates_removed"
+MANIFEST_FILENAME = ".manifest.json"
+
+
+def _staging_path(roms_root: Path, entry: ROMEntry) -> Path:
+    """Path for entry in _duplicates_removed, preserving console subdir."""
+    rel = entry.path.relative_to(roms_root)
+    return roms_root / STAGING_DIR / rel
+
+
+def _load_manifest(roms_root: Path) -> dict[str, str]:
+    """Load manifest: dest_rel -> orig_rel (both relative to roms_root)."""
+    path = roms_root / STAGING_DIR / MANIFEST_FILENAME
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text())
+
+
+def _save_manifest(roms_root: Path, manifest: dict[str, str]) -> None:
+    """Save manifest."""
+    staging = roms_root / STAGING_DIR
+    staging.mkdir(parents=True, exist_ok=True)
+    (staging / MANIFEST_FILENAME).write_text(json.dumps(manifest, indent=2))
+
+
+def apply_removal(roms_root: Path, report: DryRunReport, *, hard: bool = False) -> int:
+    """Apply removal: move to _duplicates_removed (or trash if hard). Returns count removed."""
+    roms_root = Path(roms_root)
+    count = 0
+    if hard:
+        for g in report.groups:
+            for entry in g.to_remove:
+                send2trash.send2trash(str(entry.path))
+                count += 1
+        return count
+
+    manifest = _load_manifest(roms_root)
+    for g in report.groups:
+        for entry in g.to_remove:
+            src = entry.path
+            if not src.exists():
+                continue
+            dest = _staging_path(roms_root, entry)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            src.rename(dest)
+            dest_rel = str(dest.relative_to(roms_root)).replace("\\", "/")
+            orig_rel = str(src.relative_to(roms_root)).replace("\\", "/")
+            manifest[dest_rel] = orig_rel
+            count += 1
+    if manifest:
+        _save_manifest(roms_root, manifest)
+    return count
+
+
+def restore(roms_root: Path) -> int:
+    """Restore files from _duplicates_removed to originals. Returns count restored."""
+    roms_root = Path(roms_root)
+    manifest = _load_manifest(roms_root)
+    if not manifest:
+        return 0
+    count = 0
+    for dest_rel, orig_rel in list(manifest.items()):
+        dest = roms_root / dest_rel.replace("\\", "/")
+        orig = roms_root / orig_rel.replace("\\", "/")
+        if not dest.exists():
+            continue
+        orig.parent.mkdir(parents=True, exist_ok=True)
+        dest.rename(orig)
+        count += 1
+    manifest_path = roms_root / STAGING_DIR / MANIFEST_FILENAME
+    if manifest_path.exists():
+        manifest_path.unlink()
+    for p in sorted((roms_root / STAGING_DIR).rglob("*"), reverse=True):
+        if p.is_dir() and not any(p.iterdir()):
+            p.rmdir()
+    if (roms_root / STAGING_DIR).exists() and not any((roms_root / STAGING_DIR).iterdir()):
+        (roms_root / STAGING_DIR).rmdir()
+    return count
 
 
 def format_dry_run_report(report: DryRunReport) -> str:
