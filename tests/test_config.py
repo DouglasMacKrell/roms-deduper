@@ -5,6 +5,66 @@ import pathlib
 
 import rom_deduper
 from rom_deduper.cli import main
+from rom_deduper.config import load_config
+
+
+def test_load_config_returns_defaults_when_no_file(tmp_path: pathlib.Path) -> None:
+    """Load config returns defaults when no config.json exists."""
+    cfg = load_config(tmp_path)
+    assert cfg.exclude_consoles == {"daphne", "singe", "hypseus"}
+    assert cfg.translation_patterns == []
+    assert cfg.region_priority is None
+
+
+def test_load_config_loads_from_roms_root(tmp_path: pathlib.Path) -> None:
+    """Load config from config.json in ROMs root."""
+    config_file = tmp_path / "config.json"
+    config_file.write_text(
+        json.dumps({"exclude_consoles": ["custom1", "custom2"], "translation_patterns": []})
+    )
+    cfg = load_config(tmp_path)
+    assert cfg.exclude_consoles == {"custom1", "custom2"}
+
+
+def test_load_config_loads_from_explicit_path(tmp_path: pathlib.Path) -> None:
+    """Load config from --config path."""
+    config_file = tmp_path / "myconfig.json"
+    config_file.write_text(json.dumps({"exclude_consoles": ["explicit"]}))
+    cfg = load_config(tmp_path, config_path=config_file)
+    assert cfg.exclude_consoles == {"explicit"}
+
+
+def test_load_config_explicit_path_overrides_roms_root(tmp_path: pathlib.Path) -> None:
+    """Explicit config path takes precedence over config.json in roms root."""
+    (tmp_path / "config.json").write_text(json.dumps({"exclude_consoles": ["in_root"]}))
+    explicit = tmp_path / "explicit.json"
+    explicit.write_text(json.dumps({"exclude_consoles": ["explicit"]}))
+    cfg = load_config(tmp_path, config_path=explicit)
+    assert cfg.exclude_consoles == {"explicit"}
+
+
+def _capture_main(args: list[str]) -> str:
+    """Run main with args and return stdout."""
+    import sys
+    from io import StringIO
+    from unittest.mock import patch
+
+    buf = StringIO()
+    with patch.object(sys, "stdout", buf):
+        main(args)
+    return buf.getvalue()
+
+
+def test_cli_scan_uses_config(tmp_path: pathlib.Path) -> None:
+    """CLI scan respects --config exclude_consoles."""
+    psx = tmp_path / "psx"
+    psx.mkdir()
+    (psx / "Game (USA).chd").write_bytes(b"x")
+    (psx / "Game (Japan).chd").write_bytes(b"x")
+    config_file = tmp_path / "myconfig.json"
+    config_file.write_text(json.dumps({"exclude_consoles": ["psx"]}))
+    out = _capture_main(["scan", str(tmp_path), "--config", str(config_file)])
+    assert "Game (Japan)" not in out
 
 
 def test_version() -> None:

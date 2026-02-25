@@ -8,6 +8,7 @@ import send2trash
 from rich.console import Console
 from rich.table import Table
 
+from rom_deduper.config import Config, load_config
 from rom_deduper.grouper import group_entries
 from rom_deduper.ranker import rank_group
 from rom_deduper.scanner import ROMEntry, scan
@@ -34,9 +35,12 @@ class DryRunReport:
     total_to_remove: int = 0
 
 
-def dry_run(roms_root: Path) -> DryRunReport:
+def dry_run(roms_root: Path, config: Config | None = None) -> DryRunReport:
     """Scan, group, rank; return report of what would be kept/removed."""
-    entries = scan(Path(roms_root))
+    roms_root = Path(roms_root)
+    if config is None:
+        config = load_config(roms_root)
+    entries = scan(roms_root, config=config)
     groups = group_entries(entries)
 
     report_groups: list[DryRunGroup] = []
@@ -89,12 +93,20 @@ def _save_manifest(roms_root: Path, manifest: dict[str, str]) -> None:
     (staging / MANIFEST_FILENAME).write_text(json.dumps(manifest, indent=2))
 
 
-def apply_removal(roms_root: Path, report: DryRunReport, *, hard: bool = False) -> int:
+def apply_removal(
+    roms_root: Path,
+    report: DryRunReport,
+    *,
+    hard: bool = False,
+    skip_uncertain: bool = False,
+) -> int:
     """Apply removal: move to _duplicates_removed (or trash if hard). Returns count removed."""
     roms_root = Path(roms_root)
     count = 0
     if hard:
         for g in report.groups:
+            if skip_uncertain and g.uncertain:
+                continue
             for entry in g.to_remove:
                 send2trash.send2trash(str(entry.path))
                 count += 1
@@ -102,6 +114,8 @@ def apply_removal(roms_root: Path, report: DryRunReport, *, hard: bool = False) 
 
     manifest = _load_manifest(roms_root)
     for g in report.groups:
+        if skip_uncertain and g.uncertain:
+            continue
         for entry in g.to_remove:
             src = entry.path
             if not src.exists():
@@ -118,23 +132,41 @@ def apply_removal(roms_root: Path, report: DryRunReport, *, hard: bool = False) 
     return count
 
 
-def restore(roms_root: Path) -> int:
-    """Restore files from _duplicates_removed to originals. Returns count restored."""
+def restore(
+    roms_root: Path,
+    *,
+    on_conflict: str = "skip",
+) -> int:
+    """Restore files from _duplicates_removed to originals.
+    on_conflict: 'skip' (default), 'overwrite', or 'remove'.
+    Returns count restored."""
     roms_root = Path(roms_root)
     manifest = _load_manifest(roms_root)
     if not manifest:
         return 0
     count = 0
+    had_skip = False
     for dest_rel, orig_rel in list(manifest.items()):
         dest = roms_root / dest_rel.replace("\\", "/")
         orig = roms_root / orig_rel.replace("\\", "/")
         if not dest.exists():
             continue
+        if orig.exists():
+            if on_conflict == "skip":
+                had_skip = True
+                continue
+            if on_conflict == "overwrite":
+                orig.unlink()
+            elif on_conflict == "remove":
+                dest.unlink()
+                manifest.pop(dest_rel, None)
+                _save_manifest(roms_root, manifest)
+                continue
         orig.parent.mkdir(parents=True, exist_ok=True)
         dest.rename(orig)
         count += 1
     manifest_path = roms_root / STAGING_DIR / MANIFEST_FILENAME
-    if manifest_path.exists():
+    if manifest_path.exists() and not had_skip:
         manifest_path.unlink()
     for p in sorted((roms_root / STAGING_DIR).rglob("*"), reverse=True):
         if p.is_dir() and not any(p.iterdir()):

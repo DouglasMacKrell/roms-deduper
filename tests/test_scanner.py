@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from rom_deduper.config import Config
 from rom_deduper.scanner import scan
 
 
@@ -90,3 +91,17 @@ def test_scan_finds_md_and_bin_files(tmp_roms_dir: Path) -> None:
     paths = [str(e.path) for e in result]
     assert any(".md" in p for p in paths)
     assert any(".bin" in p for p in paths)
+
+
+def test_scan_uses_config_exclude_consoles(tmp_roms_dir: Path) -> None:
+    """Scanner uses config exclude_consoles when provided."""
+    psx = tmp_roms_dir / "psx"
+    psx.mkdir()
+    (psx / "Game (USA).chd").write_bytes(b"x")
+    genesis = tmp_roms_dir / "genesis"
+    genesis.mkdir()
+    (genesis / "Game.md").write_bytes(b"x")
+    config = Config(exclude_consoles={"psx"}, translation_patterns=[], region_priority=None)
+    result = scan(tmp_roms_dir, config=config)
+    assert not any(e.console == "psx" for e in result)
+    assert any(e.console == "genesis" for e in result)

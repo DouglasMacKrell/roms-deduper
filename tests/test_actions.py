@@ -148,3 +148,54 @@ def test_restore_skips_missing_files(tmp_roms_dir: Path) -> None:
     restore(tmp_roms_dir)
     assert not (psx / "Missing.chd").exists()
     assert not manifest.exists()
+
+
+def test_restore_skips_when_original_exists(tmp_roms_dir: Path) -> None:
+    """Restore skips when original path already exists (default on_conflict=skip)."""
+    psx = tmp_roms_dir / "psx"
+    psx.mkdir()
+    (psx / "Game (Japan).chd").write_bytes(b"existing")
+    staging = tmp_roms_dir / "_duplicates_removed" / "psx"
+    staging.mkdir(parents=True)
+    (staging / "Game (Japan).chd").write_bytes(b"staged")
+    manifest = tmp_roms_dir / "_duplicates_removed" / ".manifest.json"
+    manifest.write_text(
+        json.dumps({"_duplicates_removed/psx/Game (Japan).chd": "psx/Game (Japan).chd"})
+    )
+    count = restore(tmp_roms_dir, on_conflict="skip")
+    assert count == 0
+    assert (psx / "Game (Japan).chd").read_bytes() == b"existing"
+    assert (staging / "Game (Japan).chd").exists()
+
+
+def test_restore_overwrite_when_policy_overwrite(tmp_roms_dir: Path) -> None:
+    """Restore overwrites when on_conflict=overwrite."""
+    psx = tmp_roms_dir / "psx"
+    psx.mkdir()
+    (psx / "Game (Japan).chd").write_bytes(b"existing")
+    staging = tmp_roms_dir / "_duplicates_removed" / "psx"
+    staging.mkdir(parents=True)
+    (staging / "Game (Japan).chd").write_bytes(b"staged")
+    manifest = tmp_roms_dir / "_duplicates_removed" / ".manifest.json"
+    manifest.write_text(
+        json.dumps({"_duplicates_removed/psx/Game (Japan).chd": "psx/Game (Japan).chd"})
+    )
+    count = restore(tmp_roms_dir, on_conflict="overwrite")
+    assert count == 1
+    assert (psx / "Game (Japan).chd").read_bytes() == b"staged"
+    assert not (staging / "Game (Japan).chd").exists()
+
+
+def test_apply_removal_skips_uncertain_when_requested(tmp_roms_dir: Path) -> None:
+    """Apply with skip_uncertain=True does not remove from uncertain groups."""
+    from rom_deduper.actions import dry_run
+
+    psx = tmp_roms_dir / "psx"
+    psx.mkdir()
+    (psx / "Game (USA).chd").write_bytes(b"x")
+    (psx / "Game (Japan).chd").write_bytes(b"x")
+    report = dry_run(tmp_roms_dir)
+    report.groups[0].uncertain = True
+    count = apply_removal(tmp_roms_dir, report, hard=False, skip_uncertain=True)
+    assert count == 0
+    assert (psx / "Game (Japan).chd").exists()
