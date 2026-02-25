@@ -17,6 +17,7 @@ ROM_EXTENSIONS = {
 }
 
 EXCLUDED_CONSOLES = {"daphne", "singe", "hypseus"}
+EXCLUDED_PREFIXES = (".", "_")  # Skip .venv, .git, _duplicates_removed, etc.
 
 
 @dataclass
@@ -40,6 +41,8 @@ def scan(roms_root: Path) -> list[ROMEntry]:
         if not console_dir.is_dir():
             continue
         if console_dir.name.lower() in EXCLUDED_CONSOLES:
+            continue
+        if console_dir.name.startswith(EXCLUDED_PREFIXES):
             continue
 
         console = console_dir.name

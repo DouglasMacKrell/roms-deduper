@@ -15,6 +15,7 @@ class ParseResult:
     disc_number: int | None
     has_translation: bool
     quality: str | None
+    version: str | None = None  # e.g. "Rev 2", "v1.1" for tie-breaking
 
 
 REGION_PATTERNS = [
@@ -39,6 +40,7 @@ TRANSLATION_PATTERNS = [
 
 DISC_PATTERN = re.compile(r"\(Disc\s+(\d+)\)", re.I)
 QUALITY_PATTERN = re.compile(r"\[([!bafho])\]")
+VERSION_PATTERN = re.compile(r"\((?:Rev\s+(\d+)|v?(\d+(?:\.\d+)?))\)", re.I)
 LANGUAGE_PATTERN = re.compile(r"\(([A-Za-z]{2}(?:,[A-Za-z]{2})*)\)")
 
 
@@ -61,6 +63,14 @@ def parse_filename(filename: str) -> ParseResult:
     if disc_match:
         disc_number = int(disc_match.group(1))
         stem = DISC_PATTERN.sub("", stem).strip()
+
+    # Extract version (Rev N, vN.N) and remove from stem
+    version = None
+    version_match = VERSION_PATTERN.search(stem)
+    if version_match:
+        version = version_match.group(1) or version_match.group(2)
+        stem = VERSION_PATTERN.sub("", stem).strip()
+        stem = stem.strip(" -")
 
     # Extract quality tag
     quality = None
@@ -113,4 +123,5 @@ def parse_filename(filename: str) -> ParseResult:
         disc_number=disc_number,
         has_translation=has_translation,
         quality=quality,
+        version=version,
     )
