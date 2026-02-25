@@ -93,8 +93,8 @@ def _save_manifest(roms_root: Path, manifest: dict[str, str]) -> None:
     (staging / MANIFEST_FILENAME).write_text(json.dumps(manifest, indent=2))
 
 
-def _expand_to_remove_with_m3u(entries: list[ROMEntry]) -> list[ROMEntry]:
-    """Add .m3u files to remove when they exclusively reference entries being removed."""
+def _expand_to_remove_orphan_m3u(entries: list[ROMEntry]) -> list[ROMEntry]:
+    """Add .m3u files to remove when they exclusively reference entries being removed (orphans)."""
     to_remove_paths = {e.path.resolve() for e in entries}
     expanded = list(entries)
     for entry in entries:
@@ -133,7 +133,7 @@ def apply_removal(
         for g in report.groups:
             if skip_uncertain and g.uncertain:
                 continue
-            to_remove = _expand_to_remove_with_m3u(g.to_remove)
+            to_remove = _expand_to_remove_orphan_m3u(g.to_remove)
             for entry in to_remove:
                 send2trash.send2trash(str(entry.path))
                 count += 1
@@ -143,7 +143,7 @@ def apply_removal(
     for g in report.groups:
         if skip_uncertain and g.uncertain:
             continue
-        to_remove = _expand_to_remove_with_m3u(g.to_remove)
+        to_remove = _expand_to_remove_orphan_m3u(g.to_remove)
         for entry in to_remove:
             src = entry.path
             if not src.exists():

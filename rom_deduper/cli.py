@@ -44,12 +44,6 @@ def main(args: list[str] | None = None) -> None:
         help="Path to ROMs directory (default: from config roms_path)",
     )
     add_config_arg(scan_parser)
-    scan_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        default=True,
-        help="Report only, do not remove (default)",
-    )
     _add_verbosity(scan_parser)
 
     apply_parser = subparsers.add_parser("apply", help="Remove duplicates")

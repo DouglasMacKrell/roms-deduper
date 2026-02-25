@@ -130,7 +130,8 @@ def rank_group(group: GameGroup, config: "Config | None" = None) -> RankResult:
     scored.sort(key=lambda x: x[1], reverse=True)
 
     keeper = scored[0][0]
-    to_remove = [e for e, _ in scored[1:]]
+    # Never treat .m3u as a duplicate — they're playlists that reference ROMs, not ROMs themselves
+    to_remove = [e for e, _ in scored[1:] if (e.extension or "").lower() != ".m3u"]
 
     # Check for tie (same score)
     uncertain = len(scored) > 1 and scored[0][1] == scored[1][1]

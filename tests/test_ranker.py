@@ -118,6 +118,22 @@ def test_rank_japan_with_translation_over_japan_only(tmp_roms_dir: Path) -> None
     assert "En" in str(result.keeper.path) or "(En)" in str(result.keeper.path)
 
 
+def test_rank_never_removes_m3u_playlists(tmp_roms_dir: Path) -> None:
+    """m3u files are playlists, not ROMs — never put them in to_remove."""
+    psx = tmp_roms_dir / "psx"
+    psx.mkdir()
+    (psx / "Game (USA).chd").write_bytes(b"x")
+    (psx / "Game (Japan).chd").write_bytes(b"x")
+    (psx / "Game (USA).m3u").write_text("Game (USA).chd\n")
+    entries = scan(tmp_roms_dir)
+    groups = group_entries(entries)
+    result = rank_group(groups[0])
+    assert result.keeper is not None
+    assert "USA" in str(result.keeper.path)
+    to_remove_exts = [(e.extension or "").lower() for e in result.to_remove]
+    assert ".m3u" not in to_remove_exts
+
+
 def test_rank_region_priority_override(tmp_roms_dir: Path) -> None:
     """Config region_priority overrides default (Japan > USA when configured)."""
     psx = tmp_roms_dir / "psx"

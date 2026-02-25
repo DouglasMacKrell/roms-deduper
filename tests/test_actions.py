@@ -186,10 +186,24 @@ def test_restore_overwrite_when_policy_overwrite(tmp_roms_dir: Path) -> None:
     assert not (staging / "Game (Japan).chd").exists()
 
 
-def test_apply_removal_includes_m3u_when_exclusively_references_removed(
+def test_apply_removal_keeps_m3u_that_references_keeper(tmp_roms_dir: Path) -> None:
+    """Never remove .m3u as duplicate — they reference ROMs. Keep if they point to keeper."""
+    psx = tmp_roms_dir / "psx"
+    psx.mkdir()
+    (psx / "Game (USA).chd").write_bytes(b"x")
+    (psx / "Game (Japan).chd").write_bytes(b"x")
+    (psx / "Game (USA).m3u").write_text("Game (USA).chd\n")
+    report = dry_run(tmp_roms_dir)
+    apply_removal(tmp_roms_dir, report, hard=False)
+    staging = tmp_roms_dir / "_duplicates_removed" / "psx"
+    assert (staging / "Game (Japan).chd").exists()
+    assert (psx / "Game (USA).m3u").exists()  # m3u kept, points to keeper
+
+
+def test_apply_removal_removes_orphan_m3u_when_exclusively_references_removed(
     tmp_roms_dir: Path,
 ) -> None:
-    """When removing a .chd, also remove .m3u if it only references that .chd."""
+    """Remove orphan .m3u when it only references files that were removed."""
     psx = tmp_roms_dir / "psx"
     psx.mkdir()
     (psx / "Game (USA).chd").write_bytes(b"x")

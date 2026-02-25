@@ -12,7 +12,7 @@ Find and remove duplicate ROM files across console subdirectories, with preferen
 - **Config** via `config.json` or `--config` for exclude_consoles, region_priority, translation_patterns
 - **Excludes** Daphne (LaserDisc), singe, hypseus, and dirs starting with `.` or `_`
 - **Handles** multi-disk games, .m3u playlists, .bin/.cue pairs, game folders as units
-- **Removes** .m3u when it exclusively references a removed ROM
+- **Keeps** .m3u playlists (never treats them as duplicates); removes orphan .m3u when they exclusively reference removed ROMs
 
 ## Quick Start
 
@@ -125,6 +125,7 @@ See [docs/testing.md](docs/testing.md) for full test documentation.
 - [Installation](docs/installation.md) — Full install guide
 - [Testing](docs/testing.md) — How to run tests
 - [Config Reference](docs/config.md) — Config options
+- [Technology Stack](docs/technology.md) — Tools and libraries used, and why
 
 ## License
 
